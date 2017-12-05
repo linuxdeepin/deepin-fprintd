@@ -12,9 +12,9 @@ void free_devices(char **devs);
 struct fp_dev *open_device(const char *name, int dev_idx);
 void close_device(struct fp_dev *dev);
 int enroll_finger(char *name, int dev_num,
-                     enum fp_finger finger, char *username);
+                  enum fp_finger finger, char *username);
 int identify_finger(char *name, int dev_num,
-                       enum fp_finger finger, size_t *match, 
-					   char *username);
+                    enum fp_finger finger, size_t *match, 
+                    char *username);
 
 #endif
