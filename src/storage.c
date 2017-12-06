@@ -13,15 +13,14 @@
 
 static char *finger_to_str(enum fp_finger finger);
 static char *gen_print_data_id();
-static char *get_print_data_dir(enum fp_finger finger, const char *username);
+static char *get_print_data_dir(enum fp_finger finger, int drv_id, const char *username);
 static char *get_print_data_path(char *dir);
-static struct fp_print_data *load_from_file(const char *path);
 
 int
-print_data_save(struct fp_print_data *data, enum fp_finger finger,
+print_data_save(struct fp_print_data *data, enum fp_finger finger, int drv_id,
                 const char *username)
 {
-    char *dir = get_print_data_dir(finger, username);
+    char *dir = get_print_data_dir(finger, drv_id, username);
     if (!dir) {
         return -1;
     }
@@ -68,9 +67,9 @@ print_data_save(struct fp_print_data *data, enum fp_finger finger,
 }
 
 int
-print_data_delete(enum fp_finger finger, const char *username)
+print_data_delete(enum fp_finger finger, int drv_id, const char *username)
 {
-    char *dir = get_print_data_dir(finger, username);
+    char *dir = get_print_data_dir(finger, drv_id, username);
     if (!dir) {
         return -1;
     }
@@ -99,9 +98,9 @@ print_data_delete(enum fp_finger finger, const char *username)
 }
 
 struct fp_print_data**
-print_data_load(enum fp_finger finger, const char *username)
+print_data_load(enum fp_finger finger, int drv_id, const char *username)
 {
-    char *dir = get_print_data_dir(finger, username);
+    char *dir = get_print_data_dir(finger, drv_id, username);
     if (!dir) {
         return NULL;
     }
@@ -123,7 +122,7 @@ print_data_load(enum fp_finger finger, const char *username)
             continue;
         }
 
-        struct fp_print_data *data = load_from_file(path);
+        struct fp_print_data *data = load_print_data_file(path);
         if (!data) {
             continue;
         }
@@ -139,7 +138,9 @@ print_data_load(enum fp_finger finger, const char *username)
     }
     free(dir);
     free_strv(names);
-    datas[count-1] = NULL;
+    if (count != 1) {
+        datas[count-1] = NULL;
+    }
 
     return datas;
 }
@@ -258,19 +259,27 @@ gen_print_data_id()
 }
 
 static char*
-get_print_data_dir(enum fp_finger finger, const char *username)
+get_print_data_dir(enum fp_finger finger, int drv_id, const char *username)
 {
     int ret;
+    char id[10] = {0};
+    ret = snprintf(id, 10, "%d", drv_id);
+    if (ret < 0) {
+        fprintf(stderr, "Failed to combing drv id: %s\n", strerror(errno));
+        return NULL;
+    }
+
     char *finger_name = finger_to_str(finger);
-    char *dir = (char*)calloc(sizeof(PRINT_DATA_DIR) +
-                              sizeof(username) +
-                              sizeof(finger_name) + 2, sizeof(char));
+    char *dir = (char*)calloc(strlen(PRINT_DATA_DIR) +
+                              strlen(username) +
+                              strlen(finger_name) +
+                              strlen(id) + 3, sizeof(char));
     if (!dir) {
         fprintf(stderr, "Failed to allocate memory for path: %s\n", strerror(errno));
         goto failed;
     }
 
-    ret = sprintf(dir, "%s%s/%s", PRINT_DATA_DIR, username, finger_name);
+    ret = sprintf(dir, "%s%s/%s/%s", PRINT_DATA_DIR, username, finger_name, id);
     if (ret < 0) {
         free(dir);
         dir = NULL;
@@ -285,8 +294,8 @@ failed:
     return dir;
 }
 
-static struct fp_print_data*
-load_from_file(const char *path)
+struct fp_print_data*
+load_print_data_file(const char *path)
 {
     long length;
     char *contents = NULL;

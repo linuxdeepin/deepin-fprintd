@@ -18,35 +18,35 @@ main(int argc, char *argv[])
         return -1;
     }
 
-    char **devs = list_devices();
+    int length = 0;
+    Device *devs = list_devices(&length);
     if (!devs) {
         fp_exit();
         return -1;
     }
 
     int i = 0;
-    for (; devs[i]; i++) {
-        printf("%d: %s\n", i, devs[i]);
+    for (; i < length; i++) {
+        printf("%d: %s, %d\n", i, devs[i].name, devs[i].drv_id);
     }
-    free_devices(devs);
+    free_devices(devs, length);
 
     if (strcmp(argv[1], "identify") == 0) {
         printf("Start to identify\n");
-        size_t matched = 0;
-        ret = identify_finger("Digital Persona U.are.U 4000/4000B/4500", -1,
-                              LEFT_THUMB, &matched, "deepin");
+        ret = identify_finger("Digital Persona U.are.U 4000/4000B/4500", -1, 2,
+                              LEFT_THUMB, "deepin");
         if (ret != 0) {
             fp_exit();
             return -1;
         }
-        printf("Identify successful, matched: %lu\n", matched);
+        printf("Identify successful\n");
         goto out;
     }
 
     if (strcmp(argv[1], "enroll") == 0) {
         printf("Will enroll 2 times\n");
         for (i = 0; i < 2; i++) {
-            ret = enroll_finger("Digital Persona U.are.U 4000/4000B/4500", -1,
+            ret = enroll_finger("Digital Persona U.are.U 4000/4000B/4500", -1, 2,
                                 LEFT_THUMB, "deepin");
             if (ret != 0) {
                 fprintf(stderr, "Failed in %d times enrolled\n", i+1);

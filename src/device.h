@@ -4,17 +4,23 @@
 #include <stdlib.h>
 #include <libfprint/fprint.h>
 
-char **list_devices();
-void free_devices(char **devs);
+typedef struct _device {
+    char *name;
+    int drv_id;
+} Device;
+
+Device *list_devices(int *length);
+void free_devices(Device *devs, int dev_num);
 
 // open the special index device, if dev_idx and name not matched, return NULL.
 // if dev_idx == -1, will open the first matched device
 struct fp_dev *open_device(const char *name, int dev_idx);
 void close_device(struct fp_dev *dev);
-int enroll_finger(char *name, int dev_num,
-                  enum fp_finger finger, char *username);
-int identify_finger(char *name, int dev_num,
-                    enum fp_finger finger, size_t *match, 
-                    char *username);
+int enroll_finger(char *name, int drv_id, int dev_num,
+                  uint32_t finger, char *username);
+int identify_finger(char *name, int drv_id, int dev_num,
+                    uint32_t finger, char *username);
+
+int check_print_data_file(const char *file);
 
 #endif

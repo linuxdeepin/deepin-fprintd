@@ -83,10 +83,9 @@ read_dir_files(const char *dir)
         count++;
     }
 
-    if (count == 1) {
-        return NULL;
+    if (count != 1) {
+        names[count-1] = NULL;
     }
-    names[count-1] = NULL;
 
     return names;
 }

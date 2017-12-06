@@ -52,17 +52,22 @@ is_valid_finger(enum fp_finger finger)
     return 0;
 }
 
-char**
-list_devices()
+Device*
+list_devices(int *length)
 {
+    if (!length) {
+        fprintf(stderr, "Invalid argument\n");
+        return NULL;
+    }
+
     struct fp_dscv_dev **ddevs = discover_devs_wrapper();
     if (!ddevs) {
         return NULL;
     }
 
     int i = 0;
-    int count = 1;
-    char **devs = NULL;
+    int count = 0;
+    Device *devs = NULL;
     struct fp_dscv_dev *ddev = NULL;
     for (; (ddev = ddevs[i]); i++) {
         struct fp_driver *drv = fp_dscv_dev_get_driver(ddev);
@@ -73,7 +78,7 @@ list_devices()
             continue;
         }
 
-        char **tmp = (char**)realloc(devs, (count+1) * sizeof(char*));
+        Device *tmp = (Device*)realloc(devs, (count+1) * sizeof(Device));
         if (!tmp) {
             fprintf(stderr, "Failled to realloc memory: %s\n", strerror(errno));
             free(name);
@@ -83,21 +88,30 @@ list_devices()
 
         devs = tmp;
         tmp = NULL;
-        devs[count-1] = name;
+        devs[count].name = name;
+        devs[count].drv_id = fp_driver_get_driver_id(drv);
         count++;
     }
 
     fp_dscv_devs_free(ddevs);
     ddevs = NULL;
-    devs[count-1] = NULL;
 
+    *length = count;
     return devs;
 }
 
 void
-free_devices(char **devs)
+free_devices(Device *devs, int dev_num)
 {
-    free_strv(devs);
+    if (!devs) {
+        return;
+    }
+
+    int i = 0;
+    for (; i < dev_num; i++) {
+        free(devs[i].name);
+    }
+    free(devs);
 }
 
 struct fp_dev*
@@ -157,8 +171,8 @@ close_device(struct fp_dev *dev)
 }
 
 int
-enroll_finger(char *name, int dev_idx,
-              enum fp_finger finger, char *username)
+enroll_finger(char *name, int drv_id, int dev_idx,
+              uint32_t finger, char *username)
 {
     if (!name||!username) {
         fprintf(stderr, "Invalid args for enroll\n");
@@ -186,18 +200,17 @@ enroll_finger(char *name, int dev_idx,
     fp_dev_close(dev);
     dev = NULL;
 
-    ret = print_data_save(data, finger, username);
+    ret = print_data_save(data, finger, drv_id, username);
     fp_print_data_free(data);
 
     return ret;
 }
 
 int
-identify_finger(char *name, int dev_idx,
-                enum fp_finger finger, size_t *match, 
-                char *username)
+identify_finger(char *name, int drv_id, int dev_idx,
+                uint32_t finger, char *username)
 {
-    if (!name || !match || !username) {
+    if (!name || !username) {
         fprintf(stderr, "Invalid args for identify\n");
         return -1;
     }
@@ -212,15 +225,29 @@ identify_finger(char *name, int dev_idx,
         return -1;
     }
 
-    struct fp_print_data **datas = print_data_load(finger, username);
+    struct fp_print_data **datas = print_data_load(finger, drv_id, username);
     if (!datas) {
         return -1;
     }
-    ret = do_identify(dev, datas, match);
+
+    size_t match = 0;
+    ret = do_identify(dev, datas, &match);
+    printf("Matched(%lu) for %s - %s\n", match, username, name);
     fp_dev_close(dev);
     print_datas_free(datas);
 
     return ret;
+}
+
+int
+check_print_data_file(const char *file)
+{
+    struct fp_print_data *data = load_print_data_file(file);
+    if (!data) {
+        return 0;
+    }
+    fp_print_data_free(data);
+    return 1;
 }
 
 static struct fp_print_data*
