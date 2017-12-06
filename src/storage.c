@@ -3,15 +3,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-
 #include <stdint.h>
 #include <time.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-
-#include <glib.h>
 
 #include "storage.h"
 #include "utils.h"
@@ -22,9 +15,7 @@ static char *finger_to_str(enum fp_finger finger);
 static char *gen_print_data_id();
 static char *get_print_data_dir(enum fp_finger finger, const char *username);
 static char *get_print_data_path(char *dir);
-static int mkdir_recursion(const char *path);
 static struct fp_print_data *load_from_file(const char *path);
-static char **read_dir_files(char *dir);
 
 int
 print_data_save(struct fp_print_data *data, enum fp_finger finger,
@@ -297,101 +288,15 @@ failed:
 static struct fp_print_data*
 load_from_file(const char *path)
 {
-    gsize length;
+    long length;
     char *contents = NULL;
-    GError *error = NULL;
 
-    g_file_get_contents(path, &contents, &length, &error);
-    if (error) {
-        fprintf(stderr, "Failed to get file(%s) contents: %s\n", 
-                path, error->message);
-        g_error_free(error);
+    contents = read_file_contents(path, &length);
+    if (!contents) {
         return NULL;
     }
 
     struct fp_print_data *fdata = NULL;
     fdata = fp_print_data_from_data((unsigned char *)contents, length);
     return fdata;
-}
-
-static int
-mkdir_recursion(const char *dir)
-{
-    // mode: 0755
-    char buf[256] = {0};
-    char *p = NULL;
-    mode_t mode = S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
-
-    int ret = snprintf(buf, 256, "%s", dir);
-    if (ret < 0) {
-        fprintf(stderr, "Failed to duplicate path: %s\n", strerror(errno));
-        return -1;
-    }
-
-    /* int len = strlen(buf); */
-    /* if (buf[len-1] == '/') { */
-    /*     buf[len-1] = '\0'; */
-    /* } */
-
-    for (p = buf + 1; *p; p++) {
-        if (*p == '/') {
-            *p = '\0';
-            ret = mkdir(buf, mode);
-            if (ret == -1 && errno != EEXIST) {
-                fprintf(stderr, "Failed to mkdir: %s - %s\n", buf, strerror(errno));
-                return -1;
-            }
-            *p = '/';
-        }
-    }
-    ret = mkdir(buf, mode);
-    if (ret == -1 && errno != EEXIST) {
-        fprintf(stderr, "Failed to mkdir: %s - %s\n", buf, strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
-static char**
-read_dir_files(char *dir)
-{
-    DIR *dp = opendir(dir);
-    if (!dp) {
-        fprintf(stderr, "Failed to open dir: %s\n", strerror(errno));
-        return NULL;
-    }
-
-    char **names = NULL;
-    int count = 1;
-    struct dirent *item = NULL;
-    for (; (item = readdir(dp)); ) {
-        if (item->d_type != DT_REG) {
-            continue;
-        }
-
-        int len = strlen(item->d_name);
-        char *value = (char*)calloc(len + 1, sizeof(char));
-        if (!value) {
-            fprintf(stderr, "Failed to alloc for file: %s\n", strerror(errno));
-            continue;
-        }
-        memcpy(value, item->d_name, len);
-
-        char **tmp = (char**)realloc(names, sizeof(dir)*(count+1));
-        if (!tmp) {
-            free(value);
-            fprintf(stderr, "Failed to realloc for readdir: %s\n", strerror(errno));
-            continue;
-        }
-        names = tmp;
-        names[count-1] = value;
-        count++;
-    }
-
-    if (count == 1) {
-        return NULL;
-    }
-    names[count-1] = NULL;
-
-    return names;
 }

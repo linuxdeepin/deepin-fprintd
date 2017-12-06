@@ -4,8 +4,8 @@ TARGET = deepin-fprintd
 SRC_DIR := src/
 vpath %.c ${SRC_DIR}
 
-CFLAGS = -Wall -g `pkg-config --cflags libfprint glib-2.0`
-LDFLAGS = `pkg-config --libs libfprint glib-2.0`
+CFLAGS = -Wall -g `pkg-config --cflags libfprint`
+LDFLAGS = `pkg-config --libs libfprint`
 
 OBJS := device.o storage.o utils.o main.o
 
