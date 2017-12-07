@@ -9,6 +9,8 @@
 
 #include "utils.h"
 
+static char **read_dir_type(const char *dir, unsigned char d_type);
+
 int
 mkdir_recursion(const char *dir)
 {
@@ -50,6 +52,18 @@ mkdir_recursion(const char *dir)
 char**
 read_dir_files(const char *dir)
 {
+    return read_dir_type(dir, DT_REG);
+}
+
+char**
+read_dir_subdirs(const char *dir)
+{
+    return read_dir_type(dir, DT_DIR);
+}
+
+static char**
+read_dir_type(const char *dir, unsigned char d_type)
+{
     DIR *dp = opendir(dir);
     if (!dp) {
         fprintf(stderr, "Failed to open dir: %s\n", strerror(errno));
@@ -60,7 +74,7 @@ read_dir_files(const char *dir)
     int count = 1;
     struct dirent *item = NULL;
     for (; (item = readdir(dp)); ) {
-        if (item->d_type != DT_REG) {
+        if (item->d_type != d_type) {
             continue;
         }
 

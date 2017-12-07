@@ -6,6 +6,7 @@
 #include "device.h"
 #include "utils.h"
 #include "storage.h"
+#include "_cgo_export.h"
 
 static struct fp_print_data *do_enroll(struct fp_dev *dev);
 static int do_identify(struct fp_dev *dev, struct fp_print_data **datas,
@@ -225,13 +226,42 @@ identify_finger(char *name, int drv_id, int dev_idx,
         return -1;
     }
 
-    struct fp_print_data **datas = print_data_load(finger, drv_id, username);
+    struct fp_print_data **datas = print_data_finger_load(finger, drv_id, username);
     if (!datas) {
+        fp_dev_close(dev);
         return -1;
     }
 
     size_t match = 0;
     ret = do_identify(dev, datas, &match);
+    printf("Matched(%lu) for %s - %s\n", match, username, name);
+    fp_dev_close(dev);
+    print_datas_free(datas);
+
+    return ret;
+}
+
+int
+identify_user(char *name, int drv_id, int dev_idx, char *username)
+{
+    if (!name || !username) {
+        fprintf(stderr, "Invalid args for identify\n");
+        return -1;
+    }
+
+    struct fp_dev *dev = open_device_wrapper(name, dev_idx);
+    if (!dev) {
+        return -1;
+    }
+
+    struct fp_print_data **datas = print_data_user_load(drv_id, username);
+    if (!datas) {
+        fp_dev_close(dev);
+        return -1;
+    }
+
+    size_t match = 0;
+    int ret = do_identify(dev, datas, &match);
     printf("Matched(%lu) for %s - %s\n", match, username, name);
     fp_dev_close(dev);
     print_datas_free(datas);
@@ -265,29 +295,7 @@ do_enroll(struct fp_dev *dev)
             return NULL;
         }
 
-        switch (r) {
-        case FP_ENROLL_COMPLETE:
-            printf("Enroll complete!\n");
-            break;
-        case FP_ENROLL_FAIL:
-            printf("Enroll failed :(!\n");
-            break;
-        case FP_ENROLL_PASS:
-            printf("Enroll stage passed!\n");
-            break;
-        case FP_ENROLL_RETRY:
-            printf("Didn't quite catch that. Please try again!\n");
-            break;
-        case FP_ENROLL_RETRY_TOO_SHORT:
-            printf("Your swipe was too short, try again!\n");
-            break;
-        case FP_ENROLL_RETRY_CENTER_FINGER:
-            printf("Please center your finger on the sensor, try again!\n");
-            break;
-        case FP_ENROLL_RETRY_REMOVE_FINGER:
-            printf("Scan failed, please remove your finger and try again!\n");
-            break;
-        }
+        handleEnrollStatus(r);
     } while (r != FP_ENROLL_COMPLETE);
 
     if (!print_data) {
@@ -310,32 +318,10 @@ do_identify(struct fp_dev *dev, struct fp_print_data **datas,
         return -1;
     }
 
-    switch (r) {
-    case FP_VERIFY_NO_MATCH:
-        printf("No match!\n");
-        r = -1;
-        break;
-    case FP_VERIFY_MATCH:
-        printf("Matched!\n");
-        r = 0;
-        break;
-    case FP_VERIFY_RETRY:
-        printf("Didn't quite catch that. Please try again!\n");
-        r = -1;
-        break;
-    case FP_VERIFY_RETRY_TOO_SHORT:
-        printf("Your swipe was too short, try again!\n");
-        r = -1;
-        break;
-    case FP_VERIFY_RETRY_CENTER_FINGER:
-        printf("Please center your finger on the sensor, try again!\n");
-        r = -1;
-        break;
-    case FP_ENROLL_RETRY_REMOVE_FINGER:
-        printf("Scan failed, please remove your finger and try again!\n");
-        r = -1;
-        break;
+    handleVerifyStatus(r);
+    if (r == FP_VERIFY_MATCH) {
+        return 0;
     }
 
-    return r;
+    return -1;
 }

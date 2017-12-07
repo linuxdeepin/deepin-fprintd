@@ -3,6 +3,7 @@ package main
 // #cgo pkg-config: libfprint
 // #include <stdlib.h>
 // #include "device.h"
+// #include "storage.h"
 import "C"
 
 import (
@@ -12,6 +13,12 @@ import (
 	"pkg.deepin.io/lib/strv"
 	"unsafe"
 )
+
+type DeviceInfo struct {
+	Name     string
+	DriverId int32
+}
+type DeviceInfos []*DeviceInfo
 
 const (
 	// supported finger names
@@ -78,6 +85,14 @@ func fpExit() {
 	C.fp_exit()
 }
 
+func (infos DeviceInfos) Names() []string {
+	var names []string
+	for _, info := range infos {
+		names = append(names, info.Name)
+	}
+	return names
+}
+
 func doGetDeviceList() DeviceInfos {
 	var length C.int = 0
 	var cdevs = C.list_devices(&length)
@@ -92,7 +107,6 @@ func doGetDeviceList() DeviceInfos {
 	for i := C.int(0); i < length; i++ {
 		cdev := (*C.Device)(unsafe.Pointer(clist + uintptr(i)*(itemLen)))
 		infos = append(infos, &DeviceInfo{
-			index:    int32(i),
 			Name:     C.GoString(cdev.name),
 			DriverId: int32(cdev.drv_id),
 		})
@@ -101,7 +115,7 @@ func doGetDeviceList() DeviceInfos {
 	return infos
 }
 
-func doEnroll(devName string, devIdx, drvId, finger int32, username string) {
+func doEnroll(devName string, devIdx, drvId, finger int32, username string) error {
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)
@@ -109,23 +123,45 @@ func doEnroll(devName string, devIdx, drvId, finger int32, username string) {
 
 	ret := C.enroll_finger(cdevName, C.int(devIdx), C.int(drvId), C.uint32_t(finger), cusername)
 	if ret != 0 {
-		return
+		return fmt.Errorf("Failed to enroll")
 	}
+	return nil
 }
 
-func doIdentify(devName string, devIdx, drvId, finger int32, username string) {
+func doIdentify(devName string, devIdx, drvId int32, username string) error {
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 
-	ret := C.identify_finger(cdevName, C.int(devIdx), C.int(drvId), C.uint32_t(finger), cusername)
+	ret := C.identify_user(cdevName, C.int(devIdx), C.int(drvId), cusername)
 	if ret != 0 {
-		return
+		return fmt.Errorf("Failed to identify")
 	}
+	return nil
 }
 
-func getEnrooledFingers(username string) ([]string, error) {
+func doDeleteFinger(finger uint32, drvId int32, username string) error {
+	// TODO: using go impl
+	var cusername = C.CString(username)
+	defer C.free(unsafe.Pointer(cusername))
+	ret := C.print_data_delete(C.uint32_t(finger), C.int(drvId), cusername)
+	if ret != 0 {
+		return fmt.Errorf("Failed to delete finger")
+	}
+	return nil
+}
+
+func doCleanUserFingers(username string) error {
+	var dataDir = "/var/lib/deepin/fprintd" + "/" + username
+	err := os.RemoveAll(dataDir)
+	if err != nil && err != os.ErrNotExist {
+		return err
+	}
+	return nil
+}
+
+func getEnrooledFingers(username string, drvId int32) ([]string, error) {
 	var dataDir = "/var/lib/deepin/fprintd" + "/" + username
 	dirNames, err := ioutil.ReadDir(dataDir)
 	if err != nil {
@@ -140,7 +176,7 @@ func getEnrooledFingers(username string) ([]string, error) {
 		if !_fingerStrv.Contains(dirName.Name()) {
 			continue
 		}
-		if !checkFingerData(dataDir + "/" + dirName.Name()) {
+		if !checkFingerData(fmt.Sprintf("%s/%s/%d", dataDir, dirName.Name(), drvId)) {
 			continue
 		}
 		fingerNames = append(fingerNames, dirName.Name())
@@ -164,4 +200,48 @@ func checkFingerData(dir string) bool {
 		}
 	}
 	return false
+}
+
+//export handleEnrollStatus
+func handleEnrollStatus(status C.int) {
+	var msg string
+	switch status {
+	case C.FP_ENROLL_COMPLETE:
+		msg = "Enroll complete!"
+	case C.FP_ENROLL_FAIL:
+		msg = "Enroll failed :(!"
+	case C.FP_ENROLL_PASS:
+		msg = "Enroll stage passed!"
+	case C.FP_ENROLL_RETRY:
+		msg = "Didn't quite catch that. Please try again!"
+	case C.FP_ENROLL_RETRY_TOO_SHORT:
+		msg = "Your swipe was too short, try again!"
+	case C.FP_ENROLL_RETRY_CENTER_FINGER:
+		msg = "Please center your finger on the sensor, try again!"
+	case C.FP_ENROLL_RETRY_REMOVE_FINGER:
+		msg = "Scan failed, please remove your finger and try again!"
+	}
+	fmt.Println("Enroll status:", msg)
+	emitSignal("EnrollStatus", int(status), msg)
+}
+
+//export handleVerifyStatus
+func handleVerifyStatus(status C.int) {
+	var msg string
+	switch status {
+	case C.FP_VERIFY_NO_MATCH:
+		msg = "No match!"
+	case C.FP_VERIFY_MATCH:
+		msg = "Matched!"
+	case C.FP_VERIFY_RETRY:
+		msg = "Didn't quite catch that. Please try again!"
+	case C.FP_VERIFY_RETRY_TOO_SHORT:
+		msg = "Your swipe was too short, try again!"
+	case C.FP_VERIFY_RETRY_CENTER_FINGER:
+		msg = "Please center your finger on the sensor, try again!"
+	case C.FP_ENROLL_RETRY_REMOVE_FINGER:
+		msg = "Scan failed, please remove your finger and try again!"
+	}
+	fmt.Println("Identify status:", msg)
+	emitSignal("VerifyStatus", int(status), msg)
 }

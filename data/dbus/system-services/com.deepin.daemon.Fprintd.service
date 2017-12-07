@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=com.deepin.daemon.Fprintd
+Exec=/usr/bin/deepin-fprintd
+User=root

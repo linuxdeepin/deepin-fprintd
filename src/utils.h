@@ -3,6 +3,7 @@
 
 int mkdir_recursion(const char *dir);
 char **read_dir_files(const char *dir);
+char **read_dir_subdirs(const char *dir);
 char *read_file_contents(const char *file, long *length);
 
 void free_strv(char **strv);

@@ -98,50 +98,86 @@ print_data_delete(enum fp_finger finger, int drv_id, const char *username)
 }
 
 struct fp_print_data**
-print_data_load(enum fp_finger finger, int drv_id, const char *username)
+print_data_finger_load(enum fp_finger finger, int drv_id, const char *username)
 {
     char *dir = get_print_data_dir(finger, drv_id, username);
     if (!dir) {
         return NULL;
     }
 
-    char **names = read_dir_files(dir);
-    if (!names) {
-        free(dir);
+    int len = 0;
+    struct fp_print_data **datas = load_print_datas_from_dir(dir, &len);
+    free(dir);
+    printf("Load %d print data for %s, %u, %d\n", len, username, finger, drv_id);
+
+    return datas;
+}
+
+struct fp_print_data**
+print_data_user_load(int drv_id, const char *username)
+{
+    int ret;
+    char id[10] = {0};
+    ret = snprintf(id, 10, "%d", drv_id);
+    if (ret < 0) {
+        fprintf(stderr, "Failed to combing drv id: %s\n", strerror(errno));
         return NULL;
     }
 
-    int i = 0;
-    int count = 1;
+    char *dir = (char*)calloc(strlen(PRINT_DATA_DIR) + strlen(username) + 2, 1);
+    if (!dir) {
+        fprintf(stderr, "Failed to combing user dir: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    char **subdirs = read_dir_subdirs(dir);
+    if (!subdirs) {
+        free(dir);
+        fprintf(stderr, "Failed to get subdirs: %s\n", strerror(errno));
+        return NULL;
+    }
+
     struct fp_print_data **datas = NULL;
-    for (; names[i]; i++) {
-        char path[1024] = {0};
-        int ret = snprintf(path, 1024, "%s/%s", dir, names[i]);
-        if (ret < 0) {
-            fprintf(stderr, "Failed to combing for load: %s\n", strerror(errno));
+    int count = 0;
+    int i = 0;
+    for (; subdirs[i]; i++) {
+        char *fingerDir = (char*)calloc(strlen(dir) +
+                                        strlen(subdirs[i]) +
+                                        strlen(id) + 3, 1);
+        if (!fingerDir) {
+            fprintf(stderr, "Failed to combing finger(%s) dir: %s\n", subdirs[i], strerror(errno));
             continue;
         }
 
-        struct fp_print_data *data = load_print_data_file(path);
-        if (!data) {
-            continue;
-        }
-        struct fp_print_data **tmp = (struct fp_print_data**)realloc(datas, sizeof(data) * (count+1));
-        if (!tmp) {
-            fprintf(stderr, "Failed to realloc for load data: %s\n", strerror(errno));
+        int tmpLen = 0;
+        struct fp_print_data **tmp = load_print_datas_from_dir(fingerDir, &tmpLen);
+        free(fingerDir);
+        if (!tmp || tmpLen == 0) {
             continue;
         }
 
-        datas = tmp;
-        datas[count-1] = data;
-        count++;
+        // copy tmp to datas
+        struct fp_print_data **list = (struct fp_print_data**)realloc(datas,
+                                                                      (count + tmpLen + 1) * sizeof(*tmp));
+        if (!list) {
+            print_datas_free(tmp);
+            continue;
+        }
+
+        datas = list;
+        list = NULL;
+
+        int j = 0;
+        for (; j < tmpLen; j++) {
+            datas[count+j] = tmp[j];
+        }
+        print_datas_free(tmp);
+        datas[count+j] = NULL;
+        count = tmpLen;
     }
+
     free(dir);
-    free_strv(names);
-    if (count != 1) {
-        datas[count-1] = NULL;
-    }
-
+    free_strv(subdirs);
     return datas;
 }
 
@@ -308,4 +344,46 @@ load_print_data_file(const char *path)
     struct fp_print_data *fdata = NULL;
     fdata = fp_print_data_from_data((unsigned char *)contents, length);
     return fdata;
+}
+
+struct fp_print_data**
+load_print_datas_from_dir(const char *dir, int *length)
+{
+    char **names = read_dir_files(dir);
+    if (!names) {
+        return NULL;
+    }
+
+    int i = 0;
+    int count = 1;
+    struct fp_print_data **datas = NULL;
+    for (; names[i]; i++) {
+        char path[1024] = {0};
+        int ret = snprintf(path, 1024, "%s/%s", dir, names[i]);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to combing for load: %s\n", strerror(errno));
+            continue;
+        }
+
+        struct fp_print_data *data = load_print_data_file(path);
+        if (!data) {
+            continue;
+        }
+        struct fp_print_data **tmp = (struct fp_print_data**)realloc(datas, sizeof(data) * (count+1));
+        if (!tmp) {
+            fprintf(stderr, "Failed to realloc for load data: %s\n", strerror(errno));
+            continue;
+        }
+
+        datas = tmp;
+        datas[count-1] = data;
+        count++;
+    }
+    free_strv(names);
+    if (count != 1) {
+        datas[count-1] = NULL;
+    }
+
+    *length = count -1;
+    return datas;
 }

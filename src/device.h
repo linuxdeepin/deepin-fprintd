@@ -16,10 +16,11 @@ void free_devices(Device *devs, int dev_num);
 // if dev_idx == -1, will open the first matched device
 struct fp_dev *open_device(const char *name, int dev_idx);
 void close_device(struct fp_dev *dev);
-int enroll_finger(char *name, int drv_id, int dev_num,
+int enroll_finger(char *name, int drv_id, int dev_idx,
                   uint32_t finger, char *username);
-int identify_finger(char *name, int drv_id, int dev_num,
+int identify_finger(char *name, int drv_id, int dev_idx,
                     uint32_t finger, char *username);
+int identify_user(char *name, int drv_id, int dev_idx, char *username);
 
 int check_print_data_file(const char *file);
 
