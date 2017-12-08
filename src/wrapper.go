@@ -2,8 +2,8 @@ package main
 
 // #cgo pkg-config: libfprint
 // #include <stdlib.h>
-// #include "device.h"
 // #include "storage.h"
+// #include "wrapper.h"
 import "C"
 
 import (
@@ -121,7 +121,7 @@ func doEnroll(devName string, devIdx, drvId, finger int32, username string) erro
 	var cusername = C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 
-	ret := C.enroll_finger(cdevName, C.int(devIdx), C.int(drvId), C.uint32_t(finger), cusername)
+	ret := C.enroll_finger_wrapper(cdevName, C.int(devIdx), C.int(drvId), C.uint32_t(finger), cusername)
 	if ret != 0 {
 		return fmt.Errorf("Failed to enroll")
 	}
@@ -134,7 +134,7 @@ func doIdentify(devName string, devIdx, drvId int32, username string) error {
 	var cusername = C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 
-	ret := C.identify_user(cdevName, C.int(devIdx), C.int(drvId), cusername)
+	ret := C.identify_user_wrapper(cdevName, C.int(devIdx), C.int(drvId), cusername)
 	if ret != 0 {
 		return fmt.Errorf("Failed to identify")
 	}

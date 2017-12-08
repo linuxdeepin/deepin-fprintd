@@ -24,4 +24,9 @@ int identify_user(char *name, int drv_id, int dev_idx, char *username);
 
 int check_print_data_file(const char *file);
 
+typedef void(*HandlerType)(int status);
+
+extern HandlerType enroll_handler;
+extern HandlerType verify_handler;
+
 #endif

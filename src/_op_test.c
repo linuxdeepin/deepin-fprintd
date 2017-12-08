@@ -33,7 +33,7 @@ main(int argc, char *argv[])
 
     if (strcmp(argv[1], "identify") == 0) {
         printf("Start to identify\n");
-        ret = identify_finger("Digital Persona U.are.U 4000/4000B/4500", -1, 2,
+        ret = identify_finger("Digital Persona U.are.U 4000/4000B/4500", 2, -1,
                               LEFT_THUMB, "deepin");
         if (ret != 0) {
             fp_exit();
@@ -46,7 +46,7 @@ main(int argc, char *argv[])
     if (strcmp(argv[1], "enroll") == 0) {
         printf("Will enroll 2 times\n");
         for (i = 0; i < 2; i++) {
-            ret = enroll_finger("Digital Persona U.are.U 4000/4000B/4500", -1, 2,
+            ret = enroll_finger("Digital Persona U.are.U 4000/4000B/4500", 2, -1,
                                 LEFT_THUMB, "deepin");
             if (ret != 0) {
                 fprintf(stderr, "Failed in %d times enrolled\n", i+1);

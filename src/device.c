@@ -6,11 +6,15 @@
 #include "device.h"
 #include "utils.h"
 #include "storage.h"
-#include "_cgo_export.h"
 
-static struct fp_print_data *do_enroll(struct fp_dev *dev);
+static struct fp_print_data *do_enroll(struct fp_dev *dev, HandlerType handler);
 static int do_identify(struct fp_dev *dev, struct fp_print_data **datas,
-                       size_t *match);
+                       size_t *match, HandlerType handler);
+static void handle_enroll_status(int status);
+static void handle_verify_status(int status);
+
+HandlerType enroll_handler = &handle_enroll_status;
+HandlerType verify_handler = &handle_verify_status;
 
 static struct fp_dscv_dev**
 discover_devs_wrapper()
@@ -180,7 +184,7 @@ enroll_finger(char *name, int drv_id, int dev_idx,
         return -1;
     }
 
-    int ret = is_valid_finger(finger);
+    int ret = is_valid_finger((enum fp_finger)finger);
     if (!ret) {
         return -1;
     }
@@ -190,7 +194,7 @@ enroll_finger(char *name, int drv_id, int dev_idx,
         return -1;
     }
 
-    struct fp_print_data *data = do_enroll(dev);
+    struct fp_print_data *data = do_enroll(dev, enroll_handler);
     if (!data) {
         fprintf(stderr, "Failed to enroll finger\n");
         fp_dev_close(dev);
@@ -216,7 +220,7 @@ identify_finger(char *name, int drv_id, int dev_idx,
         return -1;
     }
 
-    int ret = is_valid_finger(finger);
+    int ret = is_valid_finger((enum fp_finger)finger);
     if (!ret) {
         return -1;
     }
@@ -233,7 +237,7 @@ identify_finger(char *name, int drv_id, int dev_idx,
     }
 
     size_t match = 0;
-    ret = do_identify(dev, datas, &match);
+    ret = do_identify(dev, datas, &match, verify_handler);
     printf("Matched(%lu) for %s - %s\n", match, username, name);
     fp_dev_close(dev);
     print_datas_free(datas);
@@ -261,7 +265,7 @@ identify_user(char *name, int drv_id, int dev_idx, char *username)
     }
 
     size_t match = 0;
-    int ret = do_identify(dev, datas, &match);
+    int ret = do_identify(dev, datas, &match, verify_handler);
     printf("Matched(%lu) for %s - %s\n", match, username, name);
     fp_dev_close(dev);
     print_datas_free(datas);
@@ -281,7 +285,7 @@ check_print_data_file(const char *file)
 }
 
 static struct fp_print_data*
-do_enroll(struct fp_dev *dev)
+do_enroll(struct fp_dev *dev, HandlerType handler)
 {
     printf("You will need to successfully scan you finger %d times\n",
            fp_dev_get_nr_enroll_stages(dev));
@@ -295,7 +299,9 @@ do_enroll(struct fp_dev *dev)
             return NULL;
         }
 
-        handleEnrollStatus(r);
+		if (handler) {
+			(*handler)(r);
+		}
     } while (r != FP_ENROLL_COMPLETE);
 
     if (!print_data) {
@@ -309,7 +315,7 @@ do_enroll(struct fp_dev *dev)
 
 static int
 do_identify(struct fp_dev *dev, struct fp_print_data **datas,
-            size_t *match)
+            size_t *match, HandlerType handler)
 {
     printf("\nScan your finger for identify.\n");
     int r = fp_identify_finger(dev, datas, match);
@@ -318,10 +324,24 @@ do_identify(struct fp_dev *dev, struct fp_print_data **datas,
         return -1;
     }
 
-    handleVerifyStatus(r);
+	if (handler) {
+		(*handler)(r);
+	}
     if (r == FP_VERIFY_MATCH) {
         return 0;
     }
 
     return -1;
+}
+
+static void
+handle_enroll_status(int status)
+{
+	return;
+}
+
+static void
+handle_verify_status(int status)
+{
+	return;
 }
