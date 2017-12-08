@@ -274,6 +274,27 @@ identify_user(char *name, int drv_id, int dev_idx, char *username)
 }
 
 int
+identify_datas(char *name, int dev_idx, struct fp_print_data **datas)
+{
+    if (!name || !datas) {
+        fprintf(stderr, "Invalid args for identify\n");
+        return -1;
+    }
+
+    struct fp_dev *dev = open_device_wrapper(name, dev_idx);
+    if (!dev) {
+        return -1;
+    }
+
+    size_t match = 0;
+    int ret = do_identify(dev, datas, &match, verify_handler);
+    fp_dev_close(dev);
+    printf("Matched(%lu) for %s\n", match, name);
+
+    return ret;
+}
+
+int
 check_print_data_file(const char *file)
 {
     struct fp_print_data *data = load_print_data_file(file);

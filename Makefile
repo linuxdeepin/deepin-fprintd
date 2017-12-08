@@ -1,6 +1,7 @@
 CC = gcc
 TARGET = deepin-fprintd
-OPERATION_TEST = operation_test
+PAM = pam_deepin_fprintd.so
+TEST = op_test
 
 SRC_DIR := src/
 vpath %.c ${SRC_DIR}
@@ -8,26 +9,35 @@ vpath %.c ${SRC_DIR}
 CFLAGS = -Wall -g `pkg-config --cflags libfprint`
 LDFLAGS = `pkg-config --libs libfprint`
 
-COMMON_OBJS = device.o storage.o utils.o 
-OPTEST_OBJS := ${COMMON_OBJS} _operation_test.o
+COMMON_SRCS := src/device.c src/storage.c src/utils.c
+PAM_SRCS := ${COMMON_SRCS} pam/pam.c
 
-all : ${TARGET}
+COMMON_OBJS = device.o storage.o utils.o
+TEST_OBJS := ${COMMON_OBJS} _op_test.o
 
-${TARGET} : 
-	cd src && go build -o ../$@
+all : ${TARGET} ${PAM}
 
-${OPERATION_TEST}: ${OPTEST_OBJS}
+${TARGET} :
+	cd src && go build -o ../$@ && cd ../
+
+${PAM} : ${PAM_SRCS}
+	${CC} ${LDFLAGS} -fPIC -shared $^ -o $@
+
+${TEST}: ${TEST_OBJS}
 	${CC} ${LDFLAGS} $^ -o $@
 
 %.o : %.c
 	${CC} ${CFLAGS} -c $<
 
 clean :
-	rm -f ${OBJS} ${TARGET} ${OPTEST_OBJS} ${OPERATION_TEST}
+	rm -f ${OBJS} ${TARGET} ${TEST_OBJS} ${TEST} ${PAM}
 
 install:
 	mkdir -p /usr/bin
 	cp ${TARGET} /usr/bin/
+
+	mkdir -p /lib/x86_64-linux-gnu/security/
+	cp -f ${PAM} /lib/x86_64-linux-gnu/security/
 
 	mkdir -p /usr/share/dbus-1/system.d
 	cp data/dbus/system.d/com.deepin.daemon.Fprintd.conf /usr/share/dbus-1/system.d/

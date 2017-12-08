@@ -21,6 +21,7 @@ int enroll_finger(char *name, int drv_id, int dev_idx,
 int identify_finger(char *name, int drv_id, int dev_idx,
                     uint32_t finger, char *username);
 int identify_user(char *name, int drv_id, int dev_idx, char *username);
+int identify_datas(char *name, int dev_idx, struct fp_print_data **datas);
 
 int check_print_data_file(const char *file);
 
