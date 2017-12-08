@@ -115,28 +115,28 @@ func doGetDeviceList() DeviceInfos {
 	return infos
 }
 
-func doEnroll(devName string, devIdx, drvId, finger int32, username string) error {
+func doEnroll(devName string, drvId, devIdx, finger int32, username string) error {
 	logger.Info("Will enroll:", devName, devIdx, drvId, finger, username)
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 
-	ret := C.enroll_finger_wrapper(cdevName, C.int(devIdx), C.int(drvId), C.uint32_t(finger), cusername)
+	ret := C.enroll_finger_wrapper(cdevName, C.int(drvId), C.int(devIdx), C.uint32_t(finger), cusername)
 	if ret != 0 {
 		return fmt.Errorf("Failed to enroll")
 	}
 	return nil
 }
 
-func doIdentify(devName string, devIdx, drvId int32, username string) error {
+func doIdentify(devName string, drvId, devIdx int32, username string) error {
 	logger.Info("Will identify:", devName, devIdx, drvId, username)
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)
 	defer C.free(unsafe.Pointer(cusername))
 
-	ret := C.identify_user_wrapper(cdevName, C.int(devIdx), C.int(drvId), cusername)
+	ret := C.identify_user_wrapper(cdevName, C.int(drvId), C.int(devIdx), cusername)
 	if ret != 0 {
 		return fmt.Errorf("Failed to identify")
 	}

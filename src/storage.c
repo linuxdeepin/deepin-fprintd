@@ -180,7 +180,7 @@ print_data_user_load(int drv_id, const char *username)
         for (; j < tmpLen; j++) {
             datas[count+j] = tmp[j];
         }
-        print_datas_free(tmp);
+        free(tmp);
         datas[count+j] = NULL;
         count = tmpLen;
     }

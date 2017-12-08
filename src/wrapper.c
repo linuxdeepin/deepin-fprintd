@@ -14,17 +14,17 @@ handle_verify_status(int status)
 }
 
 int
-enroll_finger_wrapper(char *dev, int dev_idx, int drv_id, 
+enroll_finger_wrapper(char *dev, int drv_id, int dev_idx,
 		uint32_t finger, char *username)
 {
 	enroll_handler = &handle_enroll_status;
-	return enroll_finger(dev, dev_idx, drv_id, finger, username);
+	return enroll_finger(dev, drv_id, dev_idx, finger, username);
 }
 
 int
-identify_user_wrapper(char *dev, int dev_idx, int drv_id, 
+identify_user_wrapper(char *dev, int drv_id, int dev_idx,
 		char *username)
 {
 	verify_handler = &handle_verify_status;
-	return identify_user(dev, dev_idx, drv_id, username);
+	return identify_user(dev, drv_id, dev_idx, username);
 }

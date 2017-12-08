@@ -340,7 +340,6 @@ do_identify(struct fp_dev *dev, struct fp_print_data **datas,
             size_t *match, HandlerType handler)
 {
     printf("\nScan your finger for identify.\n");
-    printf("Identify data: %p, %p, %p, %p\n", dev, datas, match, handler);
     int r = fp_identify_finger(dev, datas, match);
     if (r < 0) {
         fprintf(stderr, "Failed to identify, error code: %d\n", r);

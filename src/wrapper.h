@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include "device.h"
 
-int enroll_finger_wrapper(char *dev, int dev_idx, int drv_id,
+int enroll_finger_wrapper(char *dev, int drv_id, int dev_idx,
 		uint32_t finger, char *username);
-int identify_user_wrapper(char *dev, int dev_idx, int drv_id,
+int identify_user_wrapper(char *dev, int drv_id, int dev_idx,
 		char *username);
 
 #endif
