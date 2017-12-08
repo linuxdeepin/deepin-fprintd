@@ -63,7 +63,7 @@ func (m *Manager) EnrollStart(finger int32, username string) error {
 
 	dev := m.infos[m.devIdx]
 	go func() {
-		err := doEnroll(dev.Name, m.devIdx, dev.DriverId, finger, username)
+		err := doEnroll(dev.Name, dev.DriverId, m.devIdx, finger, username)
 		m.setWorking(false)
 		if err != nil {
 			logger.Warning("Failed to enroll:", finger, username, err)
@@ -95,7 +95,7 @@ func (m *Manager) VerifyStart(username string) error {
 
 	dev := m.infos[m.devIdx]
 	go func() {
-		err := doIdentify(dev.Name, m.devIdx, dev.DriverId, username)
+		err := doIdentify(dev.Name, dev.DriverId, m.devIdx, username)
 		m.setWorking(false)
 		if err != nil {
 			logger.Warning("Failed to verify:", username, err)

@@ -116,6 +116,7 @@ func doGetDeviceList() DeviceInfos {
 }
 
 func doEnroll(devName string, devIdx, drvId, finger int32, username string) error {
+	logger.Info("Will enroll:", devName, devIdx, drvId, finger, username)
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)
@@ -129,6 +130,7 @@ func doEnroll(devName string, devIdx, drvId, finger int32, username string) erro
 }
 
 func doIdentify(devName string, devIdx, drvId int32, username string) error {
+	logger.Info("Will identify:", devName, devIdx, drvId, username)
 	var cdevName = C.CString(devName)
 	defer C.free(unsafe.Pointer(cdevName))
 	var cusername = C.CString(username)

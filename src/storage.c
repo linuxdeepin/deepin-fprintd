@@ -130,6 +130,13 @@ print_data_user_load(int drv_id, const char *username)
         return NULL;
     }
 
+    ret = sprintf(dir, "%s/%s", PRINT_DATA_DIR, username);
+    if (ret < 0) {
+        free(dir);
+        fprintf(stderr, "Failed to combing user dir: %s\n", strerror(errno));
+        return NULL;
+    }
+
     char **subdirs = read_dir_subdirs(dir);
     if (!subdirs) {
         free(dir);
@@ -148,6 +155,8 @@ print_data_user_load(int drv_id, const char *username)
             fprintf(stderr, "Failed to combing finger(%s) dir: %s\n", subdirs[i], strerror(errno));
             continue;
         }
+
+        sprintf(fingerDir, "%s/%s/%s", dir, subdirs[i], id);
 
         int tmpLen = 0;
         struct fp_print_data **tmp = load_print_datas_from_dir(fingerDir, &tmpLen);

@@ -264,6 +264,7 @@ identify_user(char *name, int drv_id, int dev_idx, char *username)
         return -1;
     }
 
+    printf("Print data load over, start verify\n");
     size_t match = 0;
     int ret = do_identify(dev, datas, &match, verify_handler);
     printf("Matched(%lu) for %s - %s\n", match, username, name);
@@ -320,9 +321,9 @@ do_enroll(struct fp_dev *dev, HandlerType handler)
             return NULL;
         }
 
-		if (handler) {
-			(*handler)(r);
-		}
+        if (handler && *handler) {
+            (*handler)(r);
+        }
     } while (r != FP_ENROLL_COMPLETE);
 
     if (!print_data) {
@@ -339,15 +340,17 @@ do_identify(struct fp_dev *dev, struct fp_print_data **datas,
             size_t *match, HandlerType handler)
 {
     printf("\nScan your finger for identify.\n");
+    printf("Identify data: %p, %p, %p, %p\n", dev, datas, match, handler);
     int r = fp_identify_finger(dev, datas, match);
     if (r < 0) {
         fprintf(stderr, "Failed to identify, error code: %d\n", r);
         return -1;
     }
 
-	if (handler) {
-		(*handler)(r);
-	}
+    printf("Handle status: %d\n", r);
+    if (handler && *handler) {
+        (*handler)(r);
+    }
     if (r == FP_VERIFY_MATCH) {
         return 0;
     }
@@ -358,11 +361,60 @@ do_identify(struct fp_dev *dev, struct fp_print_data **datas,
 static void
 handle_enroll_status(int status)
 {
-	return;
+    char *msg = NULL;
+    switch (status) {
+    case FP_ENROLL_COMPLETE:
+        msg = (char*)"Enroll complete!";
+        break;
+    case FP_ENROLL_FAIL:
+        msg = (char*)"Enroll failed :(!";
+        break;
+    case FP_ENROLL_PASS:
+        msg = (char*)"Enroll stage passed!";
+        break;
+    case FP_ENROLL_RETRY:
+        msg = (char*)"Didn't quite catch that. Please try again!";
+        break;
+    case FP_ENROLL_RETRY_TOO_SHORT:
+        msg = (char*)"Your swipe was too short, try again!";
+        break;
+    case FP_ENROLL_RETRY_CENTER_FINGER:
+        msg = (char*)"Please center your finger on the sensor, try again!";
+        break;
+    case FP_ENROLL_RETRY_REMOVE_FINGER:
+        msg = (char*)"Scan failed, please remove your finger and try again!";
+        break;
+    }
+
+    printf("Enroll status: %s - %d\n", msg, status);
+    return;
 }
 
 static void
 handle_verify_status(int status)
 {
-	return;
+    char *msg = NULL;
+    switch (status) {
+    case FP_VERIFY_NO_MATCH:
+        msg = (char*)"No match!";
+        break;
+    case FP_VERIFY_MATCH:
+        msg = (char*)"Matched!";
+        break;
+    case FP_VERIFY_RETRY:
+        msg = (char*)"Didn't quite catch that. Please try again!";
+        break;
+    case FP_VERIFY_RETRY_TOO_SHORT:
+        msg = (char*)"Your swipe was too short, try again!";
+        break;
+    case FP_VERIFY_RETRY_CENTER_FINGER:
+        msg = (char*)"Please center your finger on the sensor, try again!";
+        break;
+    case FP_ENROLL_RETRY_REMOVE_FINGER:
+        msg = (char*)"Scan failed, please remove your finger and try again!";
+        break;
+    }
+
+    printf("Verify status: %s - %d\n", msg, status);
+    return;
 }

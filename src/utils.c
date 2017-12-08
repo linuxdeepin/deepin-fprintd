@@ -66,7 +66,7 @@ read_dir_type(const char *dir, unsigned char d_type)
 {
     DIR *dp = opendir(dir);
     if (!dp) {
-        fprintf(stderr, "Failed to open dir: %s\n", strerror(errno));
+        fprintf(stderr, "Failed to open dir(%s): %s\n", dir, strerror(errno));
         return NULL;
     }
 
@@ -75,6 +75,10 @@ read_dir_type(const char *dir, unsigned char d_type)
     struct dirent *item = NULL;
     for (; (item = readdir(dp)); ) {
         if (item->d_type != d_type) {
+            continue;
+        }
+
+        if (strcmp(item->d_name, ".") == 0 || strcmp(item->d_name, "..") == 0) {
             continue;
         }
 
