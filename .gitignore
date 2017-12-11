@@ -2,3 +2,5 @@
 *.swap
 log
 a.out
+deepin-fprintd
+pam_deepin_fprintd.so

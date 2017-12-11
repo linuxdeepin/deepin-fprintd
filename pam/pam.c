@@ -132,7 +132,7 @@ get_default_device()
         return dev;
     }
 
-    dev.name = devs[0].name;
+    dev.name = strdup(devs[0].name);
     dev.drv_id = devs[0].drv_id;
     free_devices(devs, dev_num);
     return dev;
@@ -159,20 +159,24 @@ do_identify(pam_handle_t *pamh, const char *username)
         return PAM_AUTHINFO_UNAVAIL;
     }
 
-    send_info_msg(pamh, "[do_verify] get default device");
+    char _msg[1024] = {0};
+    snprintf(_msg, 1024, "[do_verify] get default device(%d - %s) for user: %s", dev.drv_id, dev.name, username);
+    send_info_msg(pamh, _msg);
     struct fp_print_data **datas = print_data_user_load(dev.drv_id, username);
     if (!datas) {
+        free(dev.name);
         fp_exit();
-        char _msg[1024] = {0};
+        memset(_msg, 0, 1024);
         snprintf(_msg, 1024, "[do_verify] failed to get print datas for %s", username);
         send_err_msg(pamh, _msg);
         return PAM_AUTHINFO_UNAVAIL;
     }
 
     uint32_t i =0;
-    char _msg[1024] = {0};
     for (; i < max_tries; i++) {
-        send_info_msg(pamh, "[do_verify] scan your fingerprint");
+        memset(_msg, 0, 1024);
+        snprintf(_msg, 1024, "[do_verify] scan your fingerprint: %s", dev.name);
+        send_info_msg(pamh, _msg);
         r = identify_datas(dev.name, 0, datas);
         if (r == 0) {
             break;
@@ -182,6 +186,7 @@ do_identify(pam_handle_t *pamh, const char *username)
         snprintf(_msg, 1024, "[do_verify] failed to identify for %s, try again", username);
         send_info_msg(pamh, _msg);
     }
+    free(dev.name);
     print_datas_free(datas);
     fp_exit();
 
