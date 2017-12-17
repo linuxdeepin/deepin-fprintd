@@ -1,0 +1,19 @@
+Source: deepin-fprintd
+Section: devel
+Priority: extra
+Maintainer: Deepin Packages Builder <packages@deepin.com>
+Build-Depends: debhelper (>= 9), golang-go,
+ golang-dlib-dev,
+ libpam-dev,
+ libfprint-dev
+Standards-Version: 3.9.8
+Homepage: http://www.deepin.org
+
+Package: deepin-fprintd
+Architecture: any
+Depends: ${shlibs:Depends},
+ ${misc:Depends},
+ libpam0g,
+ libfprint0
+Description: Fingerprint backend for deepin desktop
+ This package contains the pam module.

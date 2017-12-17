@@ -1,3 +1,4 @@
+PREFIX = /usr
 CC = gcc
 TARGET = deepin-fprintd
 PAM = pam_deepin_fprintd.so
@@ -33,15 +34,15 @@ clean :
 	rm -f ${OBJS} ${TARGET} ${TEST_OBJS} ${TEST} ${PAM}
 
 install:
-	mkdir -p /usr/bin
-	cp -f ${TARGET} /usr/bin/
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	cp -f ${TARGET} ${DESTDIR}${PREFIX}/bin/
 
-	mkdir -p /lib/x86_64-linux-gnu/security/
-	cp -f ${PAM} /lib/x86_64-linux-gnu/security/
+	mkdir -p ${DESTDIR}${PREFIX}/lib/x86_64-linux-gnu/security/
+	cp -f ${PAM} ${DESTDIR}${PREFIX}/lib/x86_64-linux-gnu/security/
 
-	mkdir -p /usr/share/dbus-1/system.d
-	cp -f data/dbus-1/system.d/com.deepin.daemon.Fprintd.conf /usr/share/dbus-1/system.d/
-	mkdir -p /usr/share/dbus-1/system-services
-	cp -f data/dbus-1/system-services/com.deepin.daemon.Fprintd.service /usr/share/dbus-1/system-services/
+	mkdir -p ${DESTDIR}${PREFIX}/share/dbus-1/system.d
+	cp -f data/dbus-1/system.d/com.deepin.daemon.Fprintd.conf ${DESTDIR}${PREFIX}/share/dbus-1/system.d/
+	mkdir -p ${DESTDIR}${PREFIX}/share/dbus-1/system-services
+	cp -f data/dbus-1/system-services/com.deepin.daemon.Fprintd.service ${DESTDIR}${PREFIX}/share/dbus-1/system-services/
 
 rebuild : clean all
