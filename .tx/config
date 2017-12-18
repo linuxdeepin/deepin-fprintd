@@ -1,0 +1,10 @@
+[main]
+host = https://www.transifex.com
+minimum_perc = 80
+mode = developer
+
+[deepin-desktop-environment.deepin-fprintdpot]
+file_filter = data/po/<lang>.po
+source_file = data/po/deepin-fprintd.pot
+source_lang = en
+type = PO
