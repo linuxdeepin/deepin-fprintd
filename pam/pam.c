@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <locale.h>
+#include <libintl.h>
 
 #define PAM_SM_AUTH
 #include <security/pam_modules.h>
@@ -34,6 +36,9 @@
 
 #define MAX_TRIES_MATCH "max-tries="
 #define TIMEOUT_MATCH "timeout="
+
+#define GETTEXT_DOMAIN "deepin-fprintd"
+#define Tr(s) gettext(s)
 
 #define D(pamh, ...) {\
     if (debug) {\
@@ -163,52 +168,49 @@ do_identify(pam_handle_t *pamh, const char *username)
     // TODO: handle multiple devices. Now ignore it.
     int r = 0;
 
-    send_info_msg(pamh, "[do_verify] init device");
+    D(pamh, "[do_verify] init device");
     r = fp_init();
     if (r != 0) {
-        send_err_msg(pamh, "[do_verify] failed to init device");
+        D(pamh, "[do_verify] failed to init device");
         return PAM_AUTHINFO_UNAVAIL;
     }
 
-    send_info_msg(pamh, "[do_verify] get default device");
+    D(pamh, "[do_verify] get default device");
     Device dev = get_default_device();
     if (!dev.name) {
         fp_exit();
-        send_err_msg(pamh, "[do_verify] failed to get default device");
+        D(pamh, "[do_verify] failed to get default device");
         return PAM_AUTHINFO_UNAVAIL;
     }
 
-    char _msg[1024] = {0};
-    snprintf(_msg, 1024, "[do_verify] get default device(%d - %s) for user: %s", dev.drv_id, dev.name, username);
-    send_info_msg(pamh, _msg);
+    D(pamh, "[do_verify] get default device(%d - %s) for user: %s", dev.drv_id, dev.name, username);
     struct fp_print_data **datas = print_data_user_load(dev.drv_id, username);
     if (!datas) {
         free(dev.name);
         fp_exit();
-        memset(_msg, 0, 1024);
-        snprintf(_msg, 1024, "[do_verify] failed to get print datas for %s", username);
-        send_err_msg(pamh, _msg);
+        D(pamh, "[do_verify] failed to get print datas for %s", username);
         return PAM_AUTHINFO_UNAVAIL;
     }
 
     uint32_t i =0;
     for (; i < max_tries; i++) {
-        memset(_msg, 0, 1024);
-        snprintf(_msg, 1024, "[do_verify] scan your fingerprint: %s", dev.name);
-        send_info_msg(pamh, _msg);
+        if ( i == 0) {
+            send_info_msg(pamh, Tr("Please verify the fingerprint"));
+        } else {
+            send_info_msg(pamh, Tr("Failed to identify fingerprint, put your finger on fingerprint recorder, move up from the bottom and unclench"));
+        }
         r = identify_datas(dev.name, 0, datas);
         if (r == 0) {
             break;
         }
-
-        memset(_msg, 0, 1024);
-        snprintf(_msg, 1024, "[do_verify] failed to identify for %s, try again", username);
-        send_info_msg(pamh, _msg);
     }
     free(dev.name);
     print_datas_free(datas);
     fp_exit();
 
+    if (r != 0) {
+        send_err_msg(pamh, Tr("Failed to match fingerprint, please enter password manually"));
+    }
     return r;
 }
 
@@ -226,12 +228,14 @@ do_auth(pam_handle_t *pamh, const char* username)
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags,
                                    int argc, const char **argv)
 {
-    // TODO:
-    // 1. i18n
-
     const char *rhost = NULL;
     const char *username = NULL;
     int r = 0;
+
+    setlocale(LC_ALL, "");
+    bindtextdomain(GETTEXT_DOMAIN, "");
+    bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8");
+    textdomain(GETTEXT_DOMAIN);
 
     pam_get_item(pamh, PAM_RHOST, (const void**)&rhost);
     if (rhost && strlen(rhost) > 0) {
@@ -239,16 +243,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags,
         return PAM_AUTHINFO_UNAVAIL;
     }
 
-    send_info_msg(pamh, "[pam_sm_authenticate] start...");
+    D(pamh, "[pam_sm_authenticate] start...");
     r = pam_get_user(pamh, &username, NULL);
     if (r != PAM_SUCCESS) {
         return PAM_AUTHINFO_UNAVAIL;
     }
 
-    char _msg[1024] = {0};
-    snprintf(_msg, 1024, "[pam_sm_authenticate] get username: %s", username);
-    send_info_msg(pamh, _msg);
-
+    D(pamh, "[pam_sm_authenticate] get username: %s", username);
     parse_params(pamh, argc, argv);
 
     return do_auth(pamh, username);
