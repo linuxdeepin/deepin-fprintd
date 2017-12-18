@@ -4,6 +4,13 @@ TARGET = deepin-fprintd
 PAM = pam_deepin_fprintd.so
 TEST = op_test
 
+ARCH = $(shell getconf LONG_BIT)
+ifeq (64,$(ARCH))
+LIB_INSTALL_DIR = /usr/lib/x86_64-linux-gnu
+else
+LIB_INSTALL_DIR = /usr/lib/i386-linux-gnu
+endif
+
 SRC_DIR := src/
 vpath %.c ${SRC_DIR}
 
@@ -37,8 +44,8 @@ install:
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f ${TARGET} ${DESTDIR}${PREFIX}/bin/
 
-	mkdir -p ${DESTDIR}${PREFIX}/lib/x86_64-linux-gnu/security/
-	cp -f ${PAM} ${DESTDIR}${PREFIX}/lib/x86_64-linux-gnu/security/
+	mkdir -p ${DESTDIR}${PREFIX}/lib/$(LIB_INSTALL_DIR)/security/
+	cp -f ${PAM} ${DESTDIR}${PREFIX}/lib/$(LIB_INSTALL_DIR)/security/
 
 	mkdir -p ${DESTDIR}${PREFIX}/share/dbus-1/system.d
 	cp -f data/dbus-1/system.d/com.deepin.daemon.Fprintd.conf ${DESTDIR}${PREFIX}/share/dbus-1/system.d/
