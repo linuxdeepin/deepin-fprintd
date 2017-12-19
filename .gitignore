@@ -4,3 +4,4 @@ log
 a.out
 deepin-fprintd
 pam_deepin_fprintd.so
+data/polkit-action/*.policy

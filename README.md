@@ -10,6 +10,7 @@ Fingerprint backend for deepin desktop, contains the pam module.
 * [go-lib](https://github.com/linuxdeepin/go-lib)
 * pam
 * libfprint
+* deepin-gettext-tools
 
 ### Runtime dependencies
 

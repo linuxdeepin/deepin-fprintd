@@ -8,3 +8,9 @@ file_filter = data/po/<lang>.po
 source_file = data/po/deepin-fprintd.pot
 source_lang = en
 type = PO
+
+[deepin-desktop-environment.deepin-fprintd-policyts]
+file_filter = data/ts/com.deepin.daemon.fprintd.policy/policy_<lang>.ts
+source_file = data/ts/com.deepin.daemon.fprintd.policy/policy.ts
+source_lang = en
+type = QT

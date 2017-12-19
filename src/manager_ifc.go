@@ -21,7 +21,17 @@ package main
 
 import (
 	"fmt"
+	"pkg.deepin.io/lib/dbus"
+	"pkg.deepin.io/lib/polkit"
 )
+
+const (
+	polkitEnrollId = "com.deepin.daemon.Fprintd.Enroll"
+	//polkitEnrollId = "com.deepin.daemon.Fprintd.Verify"
+	polkitDeleteId = "com.deepin.daemon.Fprintd.Delete"
+)
+
+var errAuthFailed = fmt.Errorf("authentication failed")
 
 func (m *Manager) GetDeviceList() []string {
 	return m.infos.Names()
@@ -55,8 +65,18 @@ func (m *Manager) ListEnrolledFingers(username string) ([]string, error) {
 	return getEnrooledFingers(username, m.infos[m.devIdx].DriverId)
 }
 
-func (m *Manager) DeleteEnrolledFinger(finger uint32, username string) error {
-	err := m.checkDevIdx()
+func (m *Manager) DeleteEnrolledFinger(dmsg dbus.DMessage, finger uint32, username string) error {
+	authorized, err := checkAuth(polkitDeleteId, dmsg)
+	if err != nil {
+		logger.Warning("[DeleteEnrolledFinger] Failed to call authorize:", err)
+		return err
+	}
+
+	if !authorized {
+		return errAuthFailed
+	}
+
+	err = m.checkDevIdx()
 	if err != nil {
 		return err
 	}
@@ -64,17 +84,36 @@ func (m *Manager) DeleteEnrolledFinger(finger uint32, username string) error {
 	return doDeleteFinger(finger, m.infos[m.devIdx].DriverId, username)
 }
 
-func (m *Manager) CleanEnrolledFinger(username string) error {
+func (m *Manager) CleanEnrolledFinger(dmsg dbus.DMessage, username string) error {
+	authorized, err := checkAuth(polkitDeleteId, dmsg)
+	if err != nil {
+		logger.Warning("[CleanEnrolledFinger] Failed to call authorize:", err)
+		return err
+	}
+
+	if !authorized {
+		return errAuthFailed
+	}
 	return doCleanUserFingers(username)
 }
 
-func (m *Manager) EnrollStart(finger int32, username string) error {
+func (m *Manager) EnrollStart(dmsg dbus.DMessage, finger int32, username string) error {
+	authorized, err := checkAuth(polkitEnrollId, dmsg)
+	if err != nil {
+		logger.Warning("[EnrollFinger] Failed to call authorize:", err)
+		return err
+	}
+
+	if !authorized {
+		return errAuthFailed
+	}
+
 	if m.getWorking() {
 		return fmt.Errorf("Enroll or verify operation being performed")
 	}
 
 	m.setWorking(true)
-	err := m.checkDevIdx()
+	err = m.checkDevIdx()
 	if err != nil {
 		m.setWorking(false)
 		return err
@@ -91,7 +130,17 @@ func (m *Manager) EnrollStart(finger int32, username string) error {
 	return nil
 }
 
-func (m *Manager) EnrollStop() error {
+func (m *Manager) EnrollStop(dmsg dbus.DMessage) error {
+	authorized, err := checkAuth(polkitEnrollId, dmsg)
+	if err != nil {
+		logger.Warning("[EnrollStop] Failed to call authorize:", err)
+		return err
+	}
+
+	if !authorized {
+		return errAuthFailed
+	}
+
 	if !m.getWorking() {
 		return fmt.Errorf("No enroll or verify operation being performed")
 	}
@@ -131,4 +180,22 @@ func (m *Manager) VerifyStop() error {
 
 	// TODO: close dev
 	return nil
+}
+
+func init() {
+	polkit.Init()
+}
+
+func checkAuth(id string, dmsg dbus.DMessage) (bool, error) {
+	subject := polkit.NewSubject(polkit.SubjectKindUnixProcess)
+	subject.SetDetail("pid", dmsg.GetSenderPID())
+	subject.SetDetail("start-time", uint64(0))
+	details := make(map[string]string)
+
+	result, err := polkit.CheckAuthorization(subject, id, details,
+		polkit.CheckAuthorizationFlagsAllowUserInteraction, "")
+	if err != nil {
+		return false, err
+	}
+	return result.IsAuthorized, nil
 }

@@ -23,7 +23,7 @@ PAM_SRCS := ${COMMON_SRCS} pam/pam.c
 COMMON_OBJS = device.o storage.o utils.o
 TEST_OBJS := ${COMMON_OBJS} _op_test.o
 
-all : ${TARGET} ${PAM}
+all : ${TARGET} ${PAM} ts-to-policy
 
 ${TARGET} :
 	cd src && go build -o ../$@ && cd ../
@@ -36,6 +36,13 @@ ${TEST}: ${TEST_OBJS}
 
 %.o : %.c
 	${CC} ${CFLAGS} -c $<
+
+ts:
+	deepin-policy-ts-convert policy2ts data/polkit-action/com.deepin.daemon.fprintd.policy.in data/ts/com.deepin.daemon.fprintd.policy
+
+ts-to-policy:
+	deepin-policy-ts-convert ts2policy data/polkit-action/com.deepin.daemon.fprintd.policy.in data/ts/com.deepin.daemon.fprintd.policy data/polkit-action/com.deepin.daemon.fprintd.policy
+
 
 clean :
 	rm -f ${OBJS} ${TARGET} ${TEST_OBJS} ${TEST} ${PAM}
@@ -51,5 +58,8 @@ install:
 	cp -f data/dbus-1/system.d/com.deepin.daemon.Fprintd.conf ${DESTDIR}${PREFIX}/share/dbus-1/system.d/
 	mkdir -p ${DESTDIR}${PREFIX}/share/dbus-1/system-services
 	cp -f data/dbus-1/system-services/com.deepin.daemon.Fprintd.service ${DESTDIR}${PREFIX}/share/dbus-1/system-services/
+
+	mkdir -p ${DESTDIR}${PREFIX}/share/polkit-1/actions
+	cp -f data/polkit-action/com.deepin.daemon.fprintd.policy ${DESTDIR}${PREFIX}/share/polkit-1/actions/
 
 rebuild : clean all

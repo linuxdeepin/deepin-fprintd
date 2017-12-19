@@ -5,6 +5,7 @@ Maintainer: Deepin Packages Builder <packages@deepin.com>
 Build-Depends: debhelper (>= 9), golang-go,
  golang-dlib-dev,
  libpam-dev,
+ deepin-gettext-tools,
  libfprint-dev
 Standards-Version: 3.9.8
 Homepage: http://www.deepin.org
