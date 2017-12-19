@@ -51,8 +51,9 @@ print_data_save(struct fp_print_data *data, enum fp_finger finger, int drv_id,
     }
 
     char *path = get_print_data_path(dir);
-    dir = NULL;
     if (!path) {
+        free(dir);
+        dir = NULL;
         return -1;
     }
 
@@ -228,7 +229,6 @@ get_print_data_path(char *dir)
 {
     char *id = gen_print_data_id();
     if (!id) {
-        free(dir);
         return NULL;
     }
 
@@ -236,7 +236,6 @@ get_print_data_path(char *dir)
     int id_len = strlen(id);
     char *tmp = (char*)realloc(dir, sizeof(char) * (dir_len + 1+ id_len + 1));
     if (!tmp) {
-        free(dir);
         free(id);
         fprintf(stderr, "Failed to realloc for path: %s\n", strerror(errno));
         return NULL;
@@ -371,6 +370,7 @@ load_print_data_file(const char *path)
 
     struct fp_print_data *fdata = NULL;
     fdata = fp_print_data_from_data((unsigned char *)contents, length);
+    free(contents);
     return fdata;
 }
 
@@ -399,6 +399,7 @@ load_print_datas_from_dir(const char *dir, int *length)
         }
         struct fp_print_data **tmp = (struct fp_print_data**)realloc(datas, sizeof(data) * (count+1));
         if (!tmp) {
+            fp_print_data_free(data);
             fprintf(stderr, "Failed to realloc for load data: %s\n", strerror(errno));
             continue;
         }

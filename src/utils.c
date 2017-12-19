@@ -124,6 +124,7 @@ read_dir_type(const char *dir, unsigned char d_type)
         names[count-1] = NULL;
     }
 
+    closedir(dp);
     return names;
 }
 
