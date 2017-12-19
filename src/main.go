@@ -22,6 +22,7 @@ package main
 import (
 	"pkg.deepin.io/lib/dbus"
 	"pkg.deepin.io/lib/log"
+	"time"
 )
 
 var logger = log.NewLogger(dbusDest)
@@ -39,6 +40,10 @@ func Start() error {
 		return err
 	}
 	dbus.DealWithUnhandledMessage()
+
+	dbus.SetAutoDestroyHandler(time.Minute*1, func() bool {
+		return !_m.getWorking()
+	})
 	return nil
 }
 
