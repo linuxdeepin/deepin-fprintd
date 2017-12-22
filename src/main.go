@@ -41,7 +41,7 @@ func Start() error {
 	}
 	dbus.DealWithUnhandledMessage()
 
-	dbus.SetAutoDestroyHandler(time.Minute*1, func() bool {
+	dbus.SetAutoDestroyHandler(time.Minute*5, func() bool {
 		return !_m.getWorking()
 	})
 	return nil

@@ -97,7 +97,7 @@ func (m *Manager) CleanEnrolledFinger(dmsg dbus.DMessage, username string) error
 	return doCleanUserFingers(username)
 }
 
-func (m *Manager) EnrollStart(dmsg dbus.DMessage, finger int32, username string) error {
+func (m *Manager) Enroll(dmsg dbus.DMessage, finger int32, username string) error {
 	authorized, err := checkAuth(polkitEnrollId, dmsg)
 	if err != nil {
 		logger.Warning("[EnrollFinger] Failed to call authorize:", err)
@@ -130,26 +130,7 @@ func (m *Manager) EnrollStart(dmsg dbus.DMessage, finger int32, username string)
 	return nil
 }
 
-func (m *Manager) EnrollStop(dmsg dbus.DMessage) error {
-	authorized, err := checkAuth(polkitEnrollId, dmsg)
-	if err != nil {
-		logger.Warning("[EnrollStop] Failed to call authorize:", err)
-		return err
-	}
-
-	if !authorized {
-		return errAuthFailed
-	}
-
-	if !m.getWorking() {
-		return fmt.Errorf("No enroll or verify operation being performed")
-	}
-
-	// TODO: close dev
-	return nil
-}
-
-func (m *Manager) VerifyStart(username string) error {
+func (m *Manager) Verify(username string) error {
 	if m.getWorking() {
 		return fmt.Errorf("Enroll or verify operation being performed")
 	}
@@ -170,15 +151,6 @@ func (m *Manager) VerifyStart(username string) error {
 		}
 	}()
 
-	return nil
-}
-
-func (m *Manager) VerifyStop() error {
-	if !m.getWorking() {
-		return fmt.Errorf("No enroll or verify operation being performed")
-	}
-
-	// TODO: close dev
 	return nil
 }
 
